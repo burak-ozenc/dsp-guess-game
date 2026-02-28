@@ -1,0 +1,7 @@
+﻿prefect
+librosa
+numpy
+psycopg[binary]
+torch
+torchaudio
+python-dotenv
