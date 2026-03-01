@@ -1,32 +1,28 @@
 ﻿from datetime import datetime
 from pathlib import Path
 
-from prefect import flow
-
 from config.config import config
 from pipeline.dsp.analyze import analyze_audio
 from pipeline.ingestion.discover import discover_files
-from pipeline.ml.vad import run_vad
-from pipeline.schema import AudioFileMetadata, AudioAnalytic, VADResult
+from pipeline.schema import AudioFileMetadata, AudioAnalytic
 from pipeline.storage.loader import Loader
 
 
-@flow
 def process_audio_pipeline(source_dir: str):
-    files = discover_files(source_dir,config.TOTAL_FILE_LIMIT_TO_PROCESS)
+    files = discover_files(source_dir, config.TOTAL_FILE_LIMIT_TO_PROCESS)
     analytics_batch = []
-    ml_label_batch = []
 
     with Loader() as loader:
         for file in files:
             try:
+                print('Processing file: {}'.format(file['file_name']))
                 status = loader.get_file_status(file['file_hash'])
                 if status == 'completed':
                     continue
                 source_type = Path(file['file_path']).parts[3]
                 audio_source_id = loader.get_or_create_audio_source(source_type)
                 # 1. insert file record, mark as processing
-
+                print('Inserting audio file: {}'.format(file['file_name']))
                 new_audio_file_id = loader.get_or_insert_audio_file(AudioFileMetadata(
                     file_path=file['file_path'],
                     file_name=file['file_name'],
@@ -34,50 +30,70 @@ def process_audio_pipeline(source_dir: str):
                     file_hash=file['file_hash'],
                     audio_source_id=audio_source_id,
                 ))
-
+                print('Updating audio file: {}'.format(file['file_name']))
                 loader.update_file_status(file_id=new_audio_file_id, status='processing')
 
                 # 2. run dsp analysis
+                print('Analyzing audio file: {}'.format(file['file_name']))
                 analysis = analyze_audio(file_path=file['file_path'])
 
-                # 3. run vad
-                vad_result = run_vad(file_path=file['file_path'], audio_file_id=new_audio_file_id)
-
                 # add bulk insert for dsp analysis
+                print('Adding to batch: {}'.format(file['file_name']))
                 analytics_batch.append(
                     AudioAnalytic(
                         audio_source_id=audio_source_id,
                         audio_file_id=new_audio_file_id,
+
+                        # Quality
                         snr_db=analysis.snr_db,
                         clipping_ratio=analysis.clipping_ratio,
-                        max_amplitude=analysis.max_amplitude,
-                        dynamic_range=analysis.dynamic_range,
-                        signal_to_quantatization_ratio=analysis.signal_to_quantatization_ratio,
-                        band_energy_ratio=analysis.band_energy_ratio,
-                        spectral_centroid_mean=analysis.spectral_centroid_mean,
-                        zcr_std=analysis.zcr_std,
-                        zcr_mean=analysis.zcr_mean,
+                        dynamic_range_db=analysis.dynamic_range_db,  # corrected field name
                         silence_ratio=analysis.silence_ratio,
-                        bandwith_mean=analysis.bandwith_mean,
-                        bandwith_std=analysis.bandwith_std,
+
+                        # Spectral
+                        spectral_centroid=analysis.spectral_centroid,
                         spectral_rolloff=analysis.spectral_rolloff,
                         spectral_flatness=analysis.spectral_flatness,
+                        spectral_bandwidth=analysis.spectral_bandwidth,
+                        spectral_flux=analysis.spectral_flux,
+                        spectral_contrast=analysis.spectral_contrast,
+
+                        # Time Domain
+                        rms_energy=analysis.rms_energy,
+                        zcr=analysis.zcr,
+                        crest_factor=analysis.crest_factor,
+                        attack_time_ms=analysis.attack_time_ms,
+                        autocorr=analysis.autocorr,
+
+                        # Perceptual
+                        mfcc=analysis.mfcc,
+                        mfcc_mean=analysis.mfcc_mean,
                         mfcc_variance=analysis.mfcc_variance,
+                        mel_stats_mean=analysis.mel_stats_mean,
+                        mel_stats_std=analysis.mel_stats_std,
+                        chroma=analysis.chroma,
+                        tonnetz=analysis.tonnetz,
+
+                        # Rhythm
+                        tempo_bpm=analysis.tempo_bpm,
+                        tempo_confidence=analysis.tempo_confidence,
+                        beat_strength=analysis.beat_strength,
+                        onset_density=analysis.onset_density,
+
+                        # Metadata
+                        hop_length=analysis.hop_length,
+                        n_fft=analysis.n_fft,
+                        n_mfcc=analysis.n_mfcc,
+                        created_at=analysis.created_at,
                         source_type=source_type,
                     )
                 )
 
-                # 5. insert ml label
-                ml_label_batch.append(VADResult(
-                    audio_file_id=new_audio_file_id,
-                    is_speech=vad_result.is_speech,
-                    speech_confidence=vad_result.speech_confidence,
-                ))
 
                 if len(analytics_batch) >= config.BULK_COPY_SIZE:
                     try:
+                        print('Limit reached, bulk copy starting')
                         loader.bulk_insert_analytics(analytics_batch)
-                        loader.bulk_insert_ml_labels(ml_label_batch)
                         for analytic in analytics_batch:
                             loader.update_file_status(
                                 file_id=analytic.audio_file_id,
@@ -91,13 +107,8 @@ def process_audio_pipeline(source_dir: str):
                                 file_id=analytic.audio_file_id,
                                 status='failed'
                             )
-                        for ml_label in ml_label_batch:
-                            loader.update_file_status(
-                                file_id=ml_label.audio_file_id,
-                                status='failed'
-                            )
+                        
                     analytics_batch.clear()
-                    ml_label_batch.clear()
 
                 print("File processed {}".format(file['file_name']))
 
@@ -108,6 +119,7 @@ def process_audio_pipeline(source_dir: str):
                 print('Error occurred during processing file :' f'{file["file_path"]}')
                 pass
         # flush remaining  analysis
+        print('Inserting leftover batches')
         if analytics_batch:
             loader.bulk_insert_analytics(analytics_batch)
             for analytic in analytics_batch:
@@ -116,13 +128,6 @@ def process_audio_pipeline(source_dir: str):
                     status='completed',
                     processed_at=datetime.now()
                 )
-        if ml_label_batch:
-            loader.bulk_insert_ml_labels(ml_label_batch)
-            for analytic in ml_label_batch:
-                loader.update_file_status(
-                    file_id=analytic.audio_file_id,
-                    status='completed',
-                    processed_at=datetime.now()
-                )
+
 
 process_audio_pipeline(config.DATA_ROOT_PATH)

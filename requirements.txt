@@ -1,7 +1,18 @@
-﻿prefect
+﻿# Pipeline
+prefect
 librosa
 numpy
-psycopg[binary]
 torch
 torchaudio
+
+# API
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+pydantic-settings
+boto3
+
+# Shared
+psycopg[binary]
 python-dotenv

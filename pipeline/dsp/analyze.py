@@ -1,12 +1,10 @@
 ﻿import librosa
 import numpy as np
-from prefect import task
 
 from config.config import config
 from pipeline.schema.audio_analytic import AudioAnalytic
 
 
-@task
 def analyze_audio(file_path: str) -> AudioAnalytic:
     """
     We will extract some features from given audio(path):
@@ -23,8 +21,8 @@ def analyze_audio(file_path: str) -> AudioAnalytic:
         n_fft=config.N_FFT,
         n_mfcc=config.N_MFCC,
         # time domain
-        rms_energy=calc_rms_energy(audio=y, sr=sr),
-        zcr=calc_zcr(audio=y, sr=sr),
+        rms_energy=calc_rms_energy(audio=y),
+        zcr=calc_zcr(audio=y),
         crest_factor=calc_crest_factor(audio=y, sr=sr),
         attack_time_ms=calc_attack_time(audio=y, sr=sr),
         autocorr=calc_auto_correlation(audio=y),
@@ -59,11 +57,11 @@ def analyze_audio(file_path: str) -> AudioAnalytic:
     return analytics
 
 
-def calc_rms_energy(audio, sr) -> [float]:
+def calc_rms_energy(audio) -> [float]:
     """
     Calculate Root-Mean-Square of given audio
     """
-    rms_energy = librosa.feature.rms(y=audio, sr=sr)[0]
+    rms_energy = librosa.feature.rms(y=audio)[0]
 
     return rms_energy.tolist()
 
@@ -76,11 +74,11 @@ def calc_clipping_ratio(audio):
     return safe_float(clipping_ratio)
 
 
-def calc_zcr(audio, sr) -> [float]:
+def calc_zcr(audio) -> [float]:
     """
     Calculate how many times the audio waveform change singes 
     """
-    zcr = librosa.feature.zero_crossing_rate(y=audio, sr=sr)[0]
+    zcr = librosa.feature.zero_crossing_rate(y=audio)[0]
 
     return zcr.tolist()
 
@@ -136,7 +134,7 @@ def calc_spectral_bandwidth(audio, sr):
      Spectral bandwidth, spreads around center frequencies
      If not, wide harmonics and complex sound
     """
-    bandwidth = librosa.feature.spectral_bandwidth(audio, sr=sr)[0]
+    bandwidth = librosa.feature.spectral_bandwidth(y=audio, sr=sr)[0]
     mean_bandwidth = np.mean(bandwidth)
 
     return mean_bandwidth
@@ -148,7 +146,7 @@ def calc_spectral_flux(audio, sr):
     """
     Measures how quickly the spectrum changes one frame to another
     """
-    D = librosa.stft(audio, sr=sr)
+    D = librosa.stft(y=audio,hop_length=config.HOP_LENGTH)
     # magnitude, phase = librosa.magphase(D) # get this way when you also want phase
     magnitude = np.abs(D)  # Fast, simple
     # difference between consecutive time frames
@@ -166,13 +164,13 @@ def calc_spectral_flux(audio, sr):
 
 
 def calc_spectral_contrast(audio, sr):
-    spectral_contrast = librosa.feature.spectral_contrast(audio, sr=sr, n_bands=6)
+    spectral_contrast = librosa.feature.spectral_contrast(y=audio, sr=sr, n_bands=6)
 
     return np.mean(spectral_contrast, axis=1).tolist()
 
 
 def calc_mel_spec(audio, sr) -> tuple[float, float]:
-    mel_spec = librosa.feature.melspectrogram(audio, sr=sr, n_mels=128)
+    mel_spec = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=128)
     mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
     mel_spec_mean = np.mean(mel_spec_db, axis=1).tolist()
     mel_spec_std = np.std(mel_spec_db, axis=1).tolist()
@@ -204,7 +202,7 @@ def calc_tonnetz(audio, sr):
     
     We can observe harmonic stability 
     """
-    tonnetz = librosa.feature.tonnetz(audio=audio, sr=sr)
+    tonnetz = librosa.feature.tonnetz(y=audio, sr=sr)
 
     return np.mean(tonnetz, axis=1).tolist()
 
@@ -242,7 +240,7 @@ def calc_rhythm_specs(audio, sr) -> tuple[float, float, float, float]:
     duration = librosa.get_duration(y=audio, sr=sr)
     onset_density = len(onset_times) / duration if duration > 0 else 0.0
 
-    return safe_float(tempo), tempo_confidence, beat_strength, onset_density
+    return safe_float(tempo[0]), tempo_confidence, beat_strength, onset_density
 
 
 def calc_rms_mean(audio):

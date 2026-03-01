@@ -1,12 +1,14 @@
-﻿from uuid import UUID
+﻿import json
+from uuid import UUID
 
 import psycopg
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from config.config import config
-from pipeline.schema import AudioAnalytic, VADResult
+from pipeline.schema import AudioAnalytic
 from pipeline.schema.audio_metadata import AudioFileMetadata
 
 
@@ -71,16 +73,15 @@ class Loader:
             else:
                 cursor.execute('insert into audio_files('
                                'file_path, file_name, file_size, file_hash,'
-                               ' audio_source_id, initial_sr, duration_ms, channel_count'
+                               ' audio_source_id, duration_ms'
                                ') '
-                               'values (%s, %s, %s, %s, %s, %s, %s, %s) '
+                               'values (%s, %s, %s, %s, %s, %s) '
                                'returning id;',
                                (metadata.file_path, metadata.file_name, metadata.file_size, metadata.file_hash,
-                                metadata.audio_source_id, metadata.initial_sr, metadata.duration_ms,
-                                metadata.channel_count))
+                                metadata.audio_source_id, metadata.duration_ms))
                 new_id = cursor.fetchone()[0]
                 self.conn.commit()
-    
+
                 return new_id
 
     def insert_audio_analytics(self, analytic: AudioAnalytic):
@@ -103,40 +104,28 @@ class Loader:
         with self.conn.cursor() as cursor:
             with cursor.copy(
                     "COPY audio_analytics("
-                    "audio_file_id, audio_source_id, snr_db,clipping_ratio,max_amplitude,dynamic_range,"
-                    "signal_to_quantatization_ratio,band_energy_ratio,spectral_centroid_mean,zcr_std,zcr_mean,"
-                    "silence_ratio,bandwith_mean,bandwith_std,source_type"
+                    "audio_file_id,audio_source_id,hop_length,n_fft,n_mfcc,rms_energy,zcr,crest_factor,attack_time_ms,autocorr,"
+                    "spectral_centroid,spectral_bandwidth,spectral_rolloff,spectral_flatness,spectral_flux,spectral_contrast,"
+                    "mfcc,mfcc_mean,mfcc_variance,mel_stats_mean,mel_stats_std,chroma,tonnetz,tempo_bpm,tempo_confidence,beat_strength,"
+                    "onset_density,snr_db,silence_ratio,clipping_ratio,dynamic_range_db,source_type"
                     ") FROM STDIN "
             ) as copy:
                 for analytic in analytics:
                     copy.write_row((
-                        analytic.audio_file_id, analytic.audio_source_id, analytic.snr_db, analytic.clipping_ratio,
-                        analytic.max_amplitude, analytic.dynamic_range, analytic.signal_to_quantatization_ratio,
-                        analytic.band_energy_ratio, analytic.spectral_centroid_mean, analytic.zcr_std,
-                        analytic.zcr_mean, analytic.silence_ratio, analytic.bandwith_mean,
-                        analytic.bandwith_std, analytic.source_type,
-                    ))
-        self.conn.commit()
-
-    def insert_ml_label(self, vad_result: VADResult):
-        with self.conn.cursor() as cursor:
-            cursor.execute('insert into ml_labels('
-                           'audio_file_id, is_speech, speech_confidence'
-                           ') '
-                           'values (%s, %s, %s);',
-                           (vad_result.audio_file_id, vad_result.is_speech, vad_result.speech_confidence))
-            self.conn.commit()
-
-    def bulk_insert_ml_labels(self, vad_results: list[VADResult]):
-        with self.conn.cursor() as cursor:
-            with cursor.copy(
-                    "COPY ml_labels("
-                    "audio_file_id, is_speech, speech_confidence"
-                    ") FROM STDIN "
-            ) as copy:
-                for vad_result in vad_results:
-                    copy.write_row((
-                        vad_result.audio_file_id, vad_result.is_speech, vad_result.speech_confidence
+                        analytic.audio_file_id, analytic.audio_source_id, config.HOP_LENGTH, config.N_FFT,
+                        config.N_MFCC, json.dumps(analytic.rms_energy),
+                        json.dumps(analytic.zcr), analytic.crest_factor, analytic.attack_time_ms, json.dumps(analytic.autocorr),
+                        analytic.spectral_centroid, analytic.spectral_bandwidth, analytic.spectral_rolloff,
+                        analytic.spectral_flatness,
+                        json.dumps(analytic.spectral_flux), json.dumps(analytic.spectral_contrast), 
+                        json.dumps(analytic.mfcc), json.dumps(analytic.mfcc_mean),
+                        json.dumps(analytic.mfcc_variance),
+                        json.dumps(analytic.mel_stats_mean), json.dumps(analytic.mel_stats_std), 
+                        json.dumps(analytic.chroma), json.dumps(analytic.tonnetz),
+                        analytic.tempo_bpm,
+                        analytic.tempo_confidence, analytic.beat_strength, analytic.onset_density, analytic.snr_db,
+                        analytic.silence_ratio,
+                        analytic.clipping_ratio, analytic.dynamic_range_db, analytic.source_type,
                     ))
         self.conn.commit()
 
