@@ -1,5 +1,6 @@
 ﻿CREATE TYPE process_status AS ENUM('pending', 'processing', 'completed', 'failed');
 
+CREATE TYPE process_status AS ENUM('pending', 'processing', 'completed', 'failed');
 
 CREATE TYPE sound_category AS ENUM ('speech', 'music', 'percussion', 'ambient', 'mechanical', 'nature', 'noise');
 
@@ -18,8 +19,6 @@ CREATE TABLE audio_files
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     audio_source_id UUID NOT NULL,
     sample_rate     INT,
-    bit_depth       SMALLINT,
-    channels        SMALLINT,
     s3_key          VARCHAR,
     s3_bucket       VARCHAR,
     category        VARCHAR,
