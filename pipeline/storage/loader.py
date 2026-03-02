@@ -2,6 +2,7 @@
 from uuid import UUID
 
 import psycopg
+import boto3
 
 from dotenv import load_dotenv
 
@@ -10,6 +11,13 @@ load_dotenv()
 from config.config import config
 from pipeline.schema import AudioAnalytic
 from pipeline.schema.audio_metadata import AudioFileMetadata
+
+s3_client = boto3.client(
+    "s3",
+    region_name=config.S3_REGION,
+    aws_access_key_id=config.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY,
+)
 
 
 class Loader:
@@ -73,11 +81,13 @@ class Loader:
             else:
                 cursor.execute('insert into audio_files('
                                'file_path, file_name, file_size, file_hash,'
+                               's3_key, s3_bucket,'
                                ' audio_source_id, duration_ms'
                                ') '
-                               'values (%s, %s, %s, %s, %s, %s) '
+                               'values (%s, %s, %s, %s, %s, %s, %s, %s) '
                                'returning id;',
                                (metadata.file_path, metadata.file_name, metadata.file_size, metadata.file_hash,
+                                metadata.s3_key, metadata.s3_bucket,
                                 metadata.audio_source_id, metadata.duration_ms))
                 new_id = cursor.fetchone()[0]
                 self.conn.commit()
@@ -143,3 +153,8 @@ class Loader:
                                (status, file_id))
 
             self.conn.commit()
+    def upload_to_s3(self,file_path: str, file_name: str) -> tuple[str, str]:
+        bucket = config.S3_BUCKET
+        s3_key = f"audio/raw/{file_name}"
+        s3_client.upload_file(file_path, bucket, s3_key)
+        return bucket, s3_key

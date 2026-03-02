@@ -25,9 +25,11 @@ HINTS_BY_DIFFICULTY = {
     DifficultyLevel.hard:   {"count": 5, "order": ["hard", "hard", "hard", "medium", "easy"]},
 }
 
+ALL_FEATURES = EASY_FEATURES | MEDIUM_FEATURES | HARD_FEATURES
+
 def get_initial_features(difficulty: DifficultyLevel) -> set:
     if difficulty == DifficultyLevel.easy:
-        return EASY_FEATURES
+        return ALL_FEATURES
     if difficulty == DifficultyLevel.medium:
         return EASY_FEATURES | MEDIUM_FEATURES
     return set()  # hard starts with nothing

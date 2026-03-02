@@ -21,6 +21,7 @@ def process_audio_pipeline(source_dir: str):
                     continue
                 source_type = Path(file['file_path']).parts[3]
                 audio_source_id = loader.get_or_create_audio_source(source_type)
+                bucket, s3_key = loader.upload_to_s3(file_path=file['file_path'], file_name=file['file_name'])
                 # 1. insert file record, mark as processing
                 print('Inserting audio file: {}'.format(file['file_name']))
                 new_audio_file_id = loader.get_or_insert_audio_file(AudioFileMetadata(
@@ -29,6 +30,8 @@ def process_audio_pipeline(source_dir: str):
                     file_size=file['file_size'],
                     file_hash=file['file_hash'],
                     audio_source_id=audio_source_id,
+                    s3_key=s3_key,
+                    s3_bucket=bucket,
                 ))
                 print('Updating audio file: {}'.format(file['file_name']))
                 loader.update_file_status(file_id=new_audio_file_id, status='processing')

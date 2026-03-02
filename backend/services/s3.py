@@ -10,7 +10,7 @@ s3_client = boto3.client(
 
 def generate_presigned_url(bucket: str, key: str) -> str:
     return s3_client.generate_presigned_url(
-        "get_object",
+        "get_object",   
         Params={"Bucket": bucket, "Key": key},
         ExpiresIn=config.PRESIGNED_URL_EXPIRY
     )

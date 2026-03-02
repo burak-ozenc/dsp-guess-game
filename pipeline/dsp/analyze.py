@@ -95,6 +95,7 @@ def calc_crest_factor(audio, sr):
 # will study this one #TODO
 def calc_attack_time(audio, sr):
     """
+    How quickly the sound does the sound reach full volume
     Use RMS energy instead of raw amplitude
     More robust to noise
     """
@@ -122,7 +123,21 @@ def calc_attack_time(audio, sr):
 def calc_auto_correlation(audio):
     """
     Calculates the autocorrelation of audio
-    Basically you change the phase(shift the time) to find the sweet spot 
+    Basically you change the phase(shift the time) to find the sweet spot where things get aligned best
+    
+    High autocorrelation at lag T:
+    - Signal repeats every T samples
+    - Periodic/tonal sound
+    - Fundamental frequency = sample_rate / T
+    
+    Low autocorrelation everywhere:
+    - No repetition
+    - Noise-like/aperiodic sound
+    
+    Musical note => Strong peaks
+    White noise => Flat (no peaks)
+    Speech vowel => Clear peaks
+    Breath sound => No clear peaks
     """
     autocorr = librosa.autocorrelate(audio)
 
@@ -131,8 +146,13 @@ def calc_auto_correlation(audio):
 
 def calc_spectral_bandwidth(audio, sr):
     """
-     Spectral bandwidth, spreads around center frequencies
-     If not, wide harmonics and complex sound
+    Spectral bandwidth, spreads around center frequencies
+    If not, wide harmonics and complex sound
+    - Sine wave => 50-200 Hz (very narrow)
+    - Trumpet (clean) => 500-1500 Hz
+    - Speech => 1000-3000 Hz
+    - Full mix music => 3000-8000 Hz
+    - Noise => 5000-15000 Hz (very wide)
     """
     bandwidth = librosa.feature.spectral_bandwidth(y=audio, sr=sr)[0]
     mean_bandwidth = np.mean(bandwidth)
@@ -251,6 +271,10 @@ def calc_rms_mean(audio):
 
 
 def calc_spectral_centroid(audio, sr):
+    """
+    Brightness
+    Average of all the frequencies 
+    """
     spectral_centroid = librosa.feature.spectral_centroid(y=audio, sr=sr)[0]
 
     return safe_float(np.mean(spectral_centroid))
@@ -296,6 +320,9 @@ def calc_snr(audio):
 
 
 def calc_dynamic_range(audio):
+    """
+    the difference between loudest and  quitest parts in audio 
+    """
     max_amplitude = np.max(audio)
     # watch out for complete silence
     min_amplitude = np.percentile(np.abs(audio), 1)
@@ -354,6 +381,7 @@ def calc_band_energy_ratio(audio, sr):
 
 def calc_spectral_rolloff(audio, sr):
     """
+    How bright is the sound?
     where total energy resides in an audio 
     """
     rolloff = librosa.feature.spectral_rolloff(y=audio, sr=sr, roll_percent=0.85)
@@ -374,8 +402,24 @@ def calc_spectral_flatness(audio):
 
 
 def calc_mfcc(audio, sr) -> tuple[[float], float, float]:
+    """
+    Mel frequency cepstral coefficients
+    
+    Main purpose is:
+    Humans perceive frequencies logarithmically
+    To make it easier to perceive the sound 
+    
+    Take FFT of audio frame
+    Apply mel-scale filter bank (mimics human ear's frequency perception)
+    Take log of energies
+    Apply DCT (decorrelates features)
+    Keep first 13-20 coefficients 
+    
+    
+    
+    """
     mfccs = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13)
-    mfcc_variance = np.var(mfccs, axis=1).tolist()
+    mfcc_variance = np.var(mfccs, axis=1).tolist() # how much timbre changes over time
     mfcc_mean = np.mean(mfccs, axis=1).tolist()
 
     return mfccs.tolist(), mfcc_mean, mfcc_variance

@@ -28,8 +28,6 @@ class AudioFile(Base):
     audio_source_id = Column(UUID(as_uuid=True), ForeignKey("audio_sources.id"), nullable=False)
     s3_key = Column(String)
     s3_bucket = Column(String)
-    category = Column(String)
-    subcategory = Column(String)
     duration_ms = Column(Integer)
     sample_rate = Column(Integer)
     file_path = Column(Text, nullable=False, unique=True)
