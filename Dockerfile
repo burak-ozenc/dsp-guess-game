@@ -20,6 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend
 COPY backend/ ./backend/
 
+# Copy config
+COPY config ./config
+
 # Move built frontend to where FastAPI can serve it
 RUN mv frontend/dist ./static
 
