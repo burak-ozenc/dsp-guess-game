@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("")
 async def start_session(difficulty: StartSessionRequest, db: AsyncSession = Depends(get_db)):
     print("Session starting")
     print("Difficulty:", difficulty.difficulty.value)
