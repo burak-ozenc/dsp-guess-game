@@ -32,7 +32,7 @@ def get_initial_features(difficulty: DifficultyLevel) -> set:
         return ALL_FEATURES
     if difficulty == DifficultyLevel.medium:
         return EASY_FEATURES | MEDIUM_FEATURES
-    return set()  # hard starts with nothing
+    return HARD_FEATURES
 
 def get_hint_feature(difficulty: DifficultyLevel, hint_index: int) -> str:
     """Returns which tier to unlock for the nth hint"""
