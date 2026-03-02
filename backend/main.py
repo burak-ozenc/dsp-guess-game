@@ -26,10 +26,13 @@ app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
 app.include_router(audio.router, prefix="/api/audio", tags=["audio"])
 
 # after routers are registered
-if os.path.exists("static"):
-    app.mount("/backend", app)   # keep API under /backend
-    app.mount("/frontend", StaticFiles(directory="static", html=True), name="static")
+from pathlib import Path
+
+static_dir = Path(__file__).parent.parent / "static"
+
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        return FileResponse("static/index.html")
+        return FileResponse(str(static_dir / "index.html"))
