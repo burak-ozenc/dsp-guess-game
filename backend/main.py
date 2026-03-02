@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 
 from backend.routers import sessions, audio
 
-app = FastAPI(title="DSP Game")
+app = FastAPI(title="DSP Game", redirect_slashes=False)
 
 origins = [
     "http://localhost:5173",
