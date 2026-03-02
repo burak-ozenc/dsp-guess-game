@@ -34,8 +34,7 @@ Purpose is to guess the source type from given analytics, based on time, spectra
 ```
 cp .env.example .env
 ```
-- To install Prefect, follow the docs [here](https://docs.prefect.io/v3/get-started/quickstart)
-- Just run the flow:
+- Run backend
 ```
-python -m pipeline.flow
+uvicorn backend.main:app --reload --port 8000
 ```
