@@ -4,6 +4,7 @@ librosa
 numpy
 torch
 torchaudio
+datasets
 
 # API
 fastapi

@@ -19,6 +19,9 @@ def process_audio_pipeline(source_dir: str):
                 status = loader.get_file_status(file['file_hash'])
                 if status == 'completed':
                     continue
+                # preprocess first
+                processed_path = file['file_path'].replace('.', '_processed.')
+                loader.preprocess_audio(file['file_path'], processed_path)
                 source_type = Path(file['file_path']).parts[3]
                 audio_source_id = loader.get_or_create_audio_source(source_type)
                 bucket, s3_key = loader.upload_to_s3(file_path=file['file_path'], file_name=file['file_name'])
@@ -38,7 +41,7 @@ def process_audio_pipeline(source_dir: str):
 
                 # 2. run dsp analysis
                 print('Analyzing audio file: {}'.format(file['file_name']))
-                analysis = analyze_audio(file_path=file['file_path'])
+                analysis = analyze_audio(file_path=processed_path)
 
                 # add bulk insert for dsp analysis
                 print('Adding to batch: {}'.format(file['file_name']))

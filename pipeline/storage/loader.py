@@ -1,4 +1,5 @@
 ﻿import json
+import subprocess
 from uuid import UUID
 
 import psycopg
@@ -158,3 +159,25 @@ class Loader:
         s3_key = f"audio/raw/{file_name}"
         s3_client.upload_file(file_path, bucket, s3_key)
         return bucket, s3_key
+    def preprocess_audio(self, input_path: str, output_path: str, duration_sec: int = config.DEFAULT_SAMPLE_DURATION_IN_SECONDS, sample_rate: int = config.DEFAULT_SAMPLE_RATE) -> str:
+        """
+        Normalize audio with ffmpeg:
+        - Clip to max duration (take middle segment, more representative than start)
+        - Convert to mono
+        - Resample to target sr
+        - Normalize to WAV
+        """
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", input_path,
+            "-ss", str(duration_sec // 4),   # start from quarter
+            "-t", str(duration_sec),          # take N seconds
+            "-ac", "1",                        # mono
+            "-ar", str(sample_rate),          # resample
+            "-acodec", "pcm_s16le",           # WAV PCM
+            output_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed: {result.stderr}")
+        return output_path
