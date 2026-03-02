@@ -1,6 +1,6 @@
 import {useEffect} from 'react'
-import {useNavigate} from 'react-router-dom'
-import { CheckCircle, XCircle, Volume2, RotateCcw, Clock, Radio, Mic, Signal } from 'lucide-react'
+import {Link, useNavigate} from 'react-router-dom'
+import {CheckCircle, XCircle, Volume2, RotateCcw, Clock, Radio, Mic, Signal} from 'lucide-react'
 import {useGameStore} from '../store/gameStore'
 import FeaturePanel from '../components/features/FeaturePanel'
 import LineChart from '../components/features/LineChart'
@@ -12,7 +12,6 @@ import StatValue from '../components/features/StatValue'
 import LockedFeature from '../components/ui/LockedFeature'
 import HintButton from '../components/game/HintButton'
 import GuessInput from '../components/game/GuessInput'
-import ScoreBadge from '../components/game/ScoreBadge'
 
 const CHROMA_LABELS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const TONNETZ_LABELS = ['5th+', '5th-', 'min3+', 'min3-', 'maj3+', 'maj3-']
@@ -35,7 +34,7 @@ export default function Game() {
     }, [])
 
     if (!features) return null
-    
+
     const td = features.time_domain
     const sp = features.spectral
     const pc = features.perceptual
@@ -50,10 +49,12 @@ export default function Game() {
             <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur border-b border-zinc-800 px-4 py-3">
                 <div className="max-w-2xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
+                        <Link to="/">
                         <span className="text-sm font-mono font-bold text-white">Signal<span
                             className="text-indigo-400">.</span>Guess</span>
-                        <span
-                            className="text-xs font-mono px-2 py-0.5 rounded-full border border-zinc-700 text-zinc-400">{diffLabel}</span>
+                            <span
+                                className="text-xs font-mono px-2 py-0.5 rounded-full border border-zinc-700 text-zinc-400">{diffLabel}</span>
+                        </Link>
                     </div>
                     <HintButton hintsRemaining={hintsRemaining} onUseHint={useHint} loading={loading}/>
                 </div>
@@ -162,11 +163,12 @@ export default function Game() {
 
                 {/* ── Guess Area ──────────────────────────────── */}
                 <div className="sticky bottom-4 mt-2">
-                    <div className="bg-zinc-900/95 backdrop-blur border border-zinc-700 rounded-2xl p-4 flex flex-col gap-3 shadow-2xl">
+                    <div
+                        className="bg-zinc-900/95 backdrop-blur border border-zinc-700 rounded-2xl p-4 flex flex-col gap-3 shadow-2xl">
                         {error && <p className="text-red-400 text-xs font-mono">{error}</p>}
 
                         {!result && (
-                            <GuessInput categories={categories} onSubmit={submitGuess} loading={loading} />
+                            <GuessInput categories={categories} onSubmit={submitGuess} loading={loading}/>
                         )}
 
                         {result && reveal && (
@@ -178,7 +180,7 @@ export default function Game() {
                                     : 'border-red-600/50 bg-red-500/10 text-red-400'
                                 }`}
                                 >
-                                    {result.correct ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                                    {result.correct ? <CheckCircle size={14}/> : <XCircle size={14}/>}
                                     <span>{result.correct ? 'Correct!' : `Wrong — it was `}</span>
                                     {!result.correct && <span className="font-bold">{result.correct_answer}</span>}
                                 </div>
@@ -187,20 +189,24 @@ export default function Game() {
                                 {reveal.audio_url && (
                                     <div className="flex flex-col gap-1.5">
                                         <div className="flex items-center gap-2">
-                                            <Volume2 size={12} className="text-indigo-400" />
+                                            <Volume2 size={12} className="text-indigo-400"/>
                                             <span className="text-xs text-zinc-400">Listen to the sample</span>
                                         </div>
-                                        <audio controls src={reveal.audio_url} className="w-full h-8 accent-indigo-500" />
+                                        <audio controls src={reveal.audio_url}
+                                               className="w-full h-8 accent-indigo-500"/>
                                     </div>
                                 )}
 
                                 {/* Play again */}
                                 <button
-                                    onClick={() => { reset(); navigate('/') }}
+                                    onClick={() => {
+                                        reset();
+                                        navigate('/')
+                                    }}
                                     className="flex items-center justify-center gap-2 py-2 rounded-lg border border-zinc-700
             hover:border-zinc-500 text-sm text-zinc-300 transition-colors"
                                 >
-                                    <RotateCcw size={13} />
+                                    <RotateCcw size={13}/>
                                     Play Again
                                 </button>
                             </>

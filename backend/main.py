@@ -13,6 +13,7 @@ origins = [
     "http://localhost:3000",
     "http://localhost:8001",
     "http://localhost:8002",
+    "https://huggingface.co/spaces/burrak/dsp-game",
 ]
 app.add_middleware(
     CORSMiddleware,
