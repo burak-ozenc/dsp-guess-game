@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y ffmpeg curl && \
 WORKDIR /app
 
 # Build frontend
-COPY dsp-game/package.json dsp-game/package-lock.json ./frontend/
+COPY dsp-game/frontend/package.json dsp-game/frontend/package-lock.json ./frontend/
 RUN cd frontend && npm ci
 
 COPY dsp-game/ ./frontend/
