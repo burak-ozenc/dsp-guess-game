@@ -1,5 +1,8 @@
-﻿from fastapi import FastAPI
+﻿import os
+from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from backend.routers import sessions, audio
 
@@ -21,3 +24,12 @@ app.add_middleware(
 
 app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
 app.include_router(audio.router, prefix="/api/audio", tags=["audio"])
+
+# after routers are registered
+if os.path.exists("static"):
+    app.mount("/backend", app)   # keep API under /backend
+    app.mount("/frontend", StaticFiles(directory="static", html=True), name="static")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        return FileResponse("static/index.html")
