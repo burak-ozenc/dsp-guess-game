@@ -20,11 +20,11 @@ A random audio sample is picked from the dataset. Its DSP features are displayed
 
 ## Difficulty
 
-| Level | Features Shown | Hints |
-|---|---|---|
-| Easy | All features visible | None |
-| Medium | Time domain + spectral | 2 hints |
-| Hard | Nothing — start blind | 5 hints (hard → medium → easy) |
+| Level | Features Shown | Hints                         |
+|---|---|-------------------------------|
+| Easy | All features visible | None                          |
+| Medium | Time domain + spectral | 1 hints                       |
+| Hard | Nothing — start blind | 2 hints |
 
 Hints in hard mode unlock from the most complex features first, so early hints are still challenging to interpret.
 
@@ -81,6 +81,11 @@ On Hugging Face Spaces, set these in the **Settings → Variables and Secrets** 
 ## Audio Pipeline
 
 Audio files are preprocessed with FFmpeg before analysis — clipped to 30 seconds from the middle of the recording, converted to mono WAV at 16kHz. Features are extracted with librosa and stored in PostgreSQL as JSONB. Audio blobs are stored in S3 and served via presigned URLs after a guess is submitted.
+To process start the process, set your **DATA_ROOT_PATH** and **CONNECTION_STRING** as is in .env.example and run command below.
+You can also select bulk COPY size, file size to process, etc. from config file. 
+```
+python -m pipeline.pipeline.flow
+```
 
 ## Project Structure
 
@@ -98,5 +103,17 @@ Audio files are preprocessed with FFmpeg before analysis — clipped to 30 secon
 │   │   ├── store/
 │   │   ├── api/
 │   │   └── types/
+├── pipeline/
+│   ├── dsp/
+│   ├── ingestion/
+│   ├── pipeline/
+│   ├── schema/
+│   ├── pipeline/
+│   └── storage/
 └── Dockerfile
 ```
+
+## For Future Development
+- Prefect flow needs to be configured. It created problem because we need to save the processed 30 sec files.
+- Hints can be optimized better, now it depends on difficulty level, can be configured to reveal single field.
+- 
