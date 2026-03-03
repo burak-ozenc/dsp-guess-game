@@ -62,27 +62,32 @@ async def use_hint(session_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="No hints remaining")
     if session.correct is not None:
         raise HTTPException(status_code=400, detail="Session already answered")
-    print('Getting analytics')
+
     analytics = await db.execute(
         select(AudioAnalytics).where(AudioAnalytics.audio_file_id == session.audio_file_id)
     )
-    print('Got analytics')
-    
     analytics = analytics.scalar_one()
-    print('Get hint features')
-    hint_tier = get_hint_feature(session.difficulty, session.hints_used)
-    tier_features = {"hard": HARD_FEATURES, "medium": MEDIUM_FEATURES, "easy": EASY_FEATURES}[hint_tier]
 
+    # read BEFORE incrementing
+    hint_tier = get_hint_feature(session.difficulty, session.hints_used)
+    if hint_tier is None:
+        raise HTTPException(status_code=400, detail="No hints remaining")
+
+    print(f"hints_used: {session.hints_used}, difficulty: {session.difficulty}, tier: {hint_tier}")
+    tier_map = {
+        "hard": HARD_FEATURES,
+        "medium": MEDIUM_FEATURES,
+        "easy": EASY_FEATURES
+    }
+    tier_features = tier_map[hint_tier]
+    # increment AFTER reading
     session.hints_used += 1
     session.hints_remaining -= 1
     await db.commit()
-    
-    print("Hint usage saved to database")
-    
+
     return {
         "hints_remaining": session.hints_remaining,
         "unlocked_tier": hint_tier,
-        # "features": filter_analytics(analytics.__dict__, tier_features)
         "features": serialize_features(analytics, tier_features)
     }
 

@@ -156,9 +156,6 @@ export default function Game() {
                     {qu.clipping_ratio != null
                         ? <Gauge label="Clipping Ratio" value={qu.clipping_ratio} min={0} max={1}/>
                         : <LockedFeature label="clipping_ratio"/>}
-                    {qu.thd_percent != null
-                        ? <StatValue label="THD" value={qu.thd_percent} unit="%" decimals={3}/>
-                        : <LockedFeature label="thd_percent"/>}
                 </FeaturePanel>
 
                 {/* ── Guess Area ──────────────────────────────── */}

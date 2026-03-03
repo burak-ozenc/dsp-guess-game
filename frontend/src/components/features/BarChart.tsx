@@ -18,16 +18,16 @@ export default function BarChart({label, data, barLabels, color = '#6366f1'}: Pr
         <div className="flex flex-col gap-1.5 animate-fade-in">
             <span className="text-xs text-zinc-400 font-mono uppercase tracking-wider">{label}</span>
             <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3">
-                <div className="flex items-end gap-1 h-12">
+                <div className="flex items-end gap-px h-14">
                     {data.map((v, i) => {
                         const pct = (v - min) / range
+                        const heightPx = Math.max(3, pct * 56)  // 56px = h-14
                         return (
-                            <div key={i} className="flex-1 flex flex-col items-center justify-end gap-0.5"
-                                 title={`${barLabels?.[i] ?? i}: ${v.toFixed(3)}`}>
+                            <div key={i} className="flex-1 flex flex-col items-center justify-end" title={`${barLabels?.[i] ?? i}: ${v.toFixed(3)}`}>
                                 <div
                                     className="w-full rounded-sm transition-all duration-700"
                                     style={{
-                                        height: `${Math.max(4, pct * 100)}%`,
+                                        height: `${heightPx}px`,
                                         backgroundColor: color,
                                         opacity: 0.4 + pct * 0.6,
                                     }}

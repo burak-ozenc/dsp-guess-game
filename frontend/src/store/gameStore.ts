@@ -34,10 +34,12 @@ const initialState = {
 }
 
 function mergeFeatures(existing: AudioFeatures, incoming: AudioFeatures): AudioFeatures {
-    const mergeGroup = <T extends object>(base: T, update: T): T => ({
-        ...base,
-        ...Object.fromEntries(Object.entries(update).filter(([, v]) => v !== null)),
-    })
+    const mergeGroup = <T extends object>(base: T, update: T): T => {
+        const incoming = Object.fromEntries(
+            Object.entries(update as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined)
+        )
+        return { ...base, ...incoming } as T
+    }
     return {
         time_domain: mergeGroup(existing.time_domain, incoming.time_domain),
         spectral: mergeGroup(existing.spectral, incoming.spectral),
@@ -85,17 +87,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     submitGuess: async (answer) => {
-        const {sessionId} = get()
+        const { sessionId } = get()
         if (!sessionId) return
-        set({loading: true, error: null})
+        set({ loading: true, error: null })
         try {
             const res = await api.submitGuess(sessionId, answer)
-            set({result: res, loading: false})
-            // fetch reveal immediately after guess
+            set({ result: res, loading: false })
             const revealRes = await api.reveal(get().sessionId!)
-            set({reveal: revealRes})
+            // destructure to exclude features from polluting game state
+            const { features: _, ...revealWithoutFeatures } = revealRes
+            set({ reveal: revealWithoutFeatures as any })
         } catch (e: any) {
-            set({error: e.message, loading: false})
+            set({ error: e.message, loading: false })
         }
     },
 
