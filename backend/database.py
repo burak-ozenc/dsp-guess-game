@@ -10,7 +10,11 @@ ssl_context = ssl.create_default_context()
 # Build engine with SSL for asyncpg
 engine = create_async_engine(
     config.DATABASE_URL,
-    connect_args={"ssl": ssl_context}
+    connect_args={"ssl": ssl_context},
+    pool_pre_ping=True,       # reconnects on stale connections
+    pool_recycle=300,          # recycle connections every 5 min
+    pool_size=5,
+    max_overflow=10,
 )
 
 # Session factory
